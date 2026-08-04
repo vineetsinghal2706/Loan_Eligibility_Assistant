@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Loan Eligibility Assistant</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; background: #f1f5f9; color: #0f172a; }
+    header { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; background: #0f172a; color: white; }
+    header .brand { font-weight: 700; font-size: 16px; }
+    header .brand span { color: #93c5fd; font-weight: 400; font-size: 12px; margin-left: 8px; }
+    .tabs { display: flex; gap: 6px; padding: 10px 20px 0; background: white; border-bottom: 1px solid #e2e8f0; }
+    .tab-btn { padding: 9px 16px; border: none; background: none; font-size: 13px; font-weight: 600; color: #64748b; cursor: pointer; border-bottom: 2px solid transparent; }
+    .tab-btn.active { color: #2563eb; border-bottom-color: #2563eb; }
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    /* Chat panel */
+    .chat-layout { display: flex; height: calc(100vh - 96px); }
+    .chat-main { flex: 1; display: flex; flex-direction: column; }
+    .messages { flex: 1; overflow-y: auto; padding: 20px; max-width: 760px; margin: 0 auto; width: 100%; }
+    .msg { margin-bottom: 16px; display: flex; }
+    .msg.user { justify-content: flex-end; }
+    .msg .bubble { max-width: 75%; padding: 10px 14px; border-radius: 12px; font-size: 14px; line-height: 1.5; white-space: pre-wrap; }
+    .msg.user .bubble { background: #2563eb; color: white; }
+    .msg.assistant .bubble { background: white; border: 1px solid #e2e8f0; }
+    .badge { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 999px; margin-bottom: 8px; text-transform: uppercase; }
+    .badge.eligible { background: #dcfce7; color: #166534; }
+    .badge.not_eligible { background: #fee2e2; color: #991b1b; }
+    .badge.needs_more_info { background: #fef9c3; color: #854d0e; }
+    .sources { margin-top: 10px; font-size: 11px; }
+    .source-chip { display: inline-block; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 6px; padding: 4px 8px; margin: 3px 3px 0 0; cursor: help; }
+    .composer { padding: 14px 20px; background: white; border-top: 1px solid #e2e8f0; }
+    .composer-inner { max-width: 760px; margin: 0 auto; display: flex; gap: 8px; }
+    .composer textarea { flex: 1; resize: none; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; font-family: inherit; height: 44px; }
+    .composer button { padding: 0 18px; border: none; border-radius: 8px; background: #2563eb; color: white; font-weight: 600; cursor: pointer; }
+    .composer button:hover { background: #1d4ed8; }
+    .samples { display: flex; gap: 6px; flex-wrap: wrap; max-width: 760px; margin: 0 auto 10px; }
+    .sample-btn { font-size: 11px; background: #eef2ff; color: #3730a3; border: 1px solid #c7d2fe; border-radius: 999px; padding: 5px 10px; cursor: pointer; }
+    .sample-btn:hover { background: #e0e7ff; }
+
+    /* Audit/Metrics panel */
+    .container { padding: 20px 28px; max-width: 1100px; margin: 0 auto; }
+    .metric-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
+    .metric-card { background: white; border-radius: 10px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .metric-card .label { font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: 600; }
+    .metric-card .value { font-size: 24px; font-weight: 700; margin-top: 4px; }
+    .card { background: white; border-radius: 10px; padding: 18px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .card h3 { margin: 0 0 12px; font-size: 14px; display: flex; justify-content: space-between; align-items: center; }
+    table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+    th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
+    th { color: #64748b; font-weight: 600; font-size: 11px; text-transform: uppercase; }
+    .btn { padding: 7px 12px; border: none; border-radius: 6px; background: #e2e8f0; color: #0f172a; font-size: 12px; font-weight: 600; cursor: pointer; }
+    .btn:hover { background: #cbd5e1; }
+    .hint { font-size: 11px; color: #94a3b8; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">Loan Eligibility Assistant <span>RAG demo &middot; pre-qualification</span></div>
+  </header>
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="chat">Chat</button>
+    <button class="tab-btn" data-tab="metrics">Audit &amp; Metrics</button>
+  </div>
+
+  <div class="panel active" id="panel-chat">
+    <div class="chat-layout">
+      <div class="chat-main">
+        <div class="messages" id="messages"></div>
+        <div class="samples" id="samples"></div>
+        <div class="composer">
+          <div class="composer-inner">
+            <textarea id="composer-input" placeholder="Ask about pre-qualification, e.g. credit score, income, DTI, employment history..."></textarea>
+            <button id="send-btn">Send</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-metrics">
+    <div class="container">
+      <div class="metric-grid" id="metric-grid"></div>
+      <div class="card">
+        <h3>Eval gate (from CI) <button class="btn" onclick="refreshMetrics()">Refresh</button></h3>
+        <div id="eval-summary" class="hint">Loading...</div>
+      </div>
+      <div class="card">
+        <h3>Recent audit log <button class="btn" onclick="refreshAudit()">Refresh</button></h3>
+        <table>
+          <thead><tr><th>Time</th><th>Question</th><th>Loan type</th><th>Verdict</th><th>Latency</th></tr></thead>
+          <tbody id="audit-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const SAMPLE_QUESTIONS = [
+      "I have a credit score of 700, annual income of $60,000, DTI of 25%, and I've been employed for 24 months. Am I eligible for a personal loan?",
+      "My credit score is 580 and my income is $50,000. Can I get a personal loan?",
+      "Credit score 640, income $22,000, DTI 40%, employed 6 months. Auto loan?",
+      "What ID or KYC documents do I need to provide?",
+      "What's the minimum credit score for a mortgage?",
+    ];
+
+    function escapeHtml(str) {
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    // ---------- Tabs ----------
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+        if (btn.dataset.tab === 'metrics') { refreshMetrics(); refreshAudit(); }
+      });
+    });
+
+    // ---------- Chat ----------
+    const messagesEl = document.getElementById('messages');
+
+    function appendMessage(role, text) {
+      const wrap = document.createElement('div');
+      wrap.className = 'msg ' + role;
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble';
+      bubble.innerHTML = '<div class="msg-text"></div><div class="msg-extra"></div>';
+      bubble.querySelector('.msg-text').textContent = text;
+      wrap.appendChild(bubble);
+      messagesEl.appendChild(wrap);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+      return bubble;
+    }
+
+    function renderDone(bubble, evt) {
+      const extra = bubble.querySelector('.msg-extra');
+      let html = '<div class="badge ' + evt.verdict + '">' + evt.verdict.replace(/_/g, ' ') + '</div>';
+      if (evt.sources && evt.sources.length) {
+        html += '<div class="sources">';
+        evt.sources.forEach(s => {
+          html += '<span class="source-chip" title="' + escapeHtml(s.snippet) + '">' + escapeHtml(s.title) + ' (' + s.score + ')</span>';
+        });
+        html += '</div>';
+      }
+      html += '<div class="hint" style="margin-top:6px;">latency: ' + evt.latency_ms + ' ms</div>';
+      extra.innerHTML = html;
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    async function sendMessage(text) {
+      if (!text.trim()) return;
+      appendMessage('user', text);
+      const assistantBubble = appendMessage('assistant', '');
+      document.getElementById('composer-input').value = '';
+
+      try {
+        const resp = await fetch('/api/chat/stream', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: text }),
+        });
+        const reader = resp.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        const textEl = assistantBubble.querySelector('.msg-text');
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const parts = buffer.split('\n\n');
+          buffer = parts.pop();
+          for (const part of parts) {
+            const line = part.trim();
+            if (!line.startsWith('data:')) continue;
+            const jsonStr = line.slice(5).trim();
+            if (!jsonStr) continue;
+            const evt = JSON.parse(jsonStr);
+            if (evt.type === 'token') {
+              textEl.textContent += evt.text;
+              messagesEl.scrollTop = messagesEl.scrollHeight;
+            } else if (evt.type === 'done') {
+              renderDone(assistantBubble, evt);
+            }
+          }
+        }
+      } catch (e) {
+        assistantBubble.querySelector('.msg-text').textContent = 'Error: ' + e;
+      }
+    }
+
+    document.getElementById('send-btn').addEventListener('click', () => {
+      sendMessage(document.getElementById('composer-input').value);
+    });
+    document.getElementById('composer-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage(document.getElementById('composer-input').value);
+      }
+    });
+
+    const samplesEl = document.getElementById('samples');
+    SAMPLE_QUESTIONS.forEach(q => {
+      const btn = document.createElement('button');
+      btn.className = 'sample-btn';
+      btn.textContent = q.length > 60 ? q.slice(0, 57) + '...' : q;
+      btn.title = q;
+      btn.onclick = () => sendMessage(q);
+      samplesEl.appendChild(btn);
+    });
+
+    appendMessage('assistant', "Hi, I'm the Loan Eligibility Assistant. Ask me about pre-qualification for a personal loan, auto loan, mortgage, or credit card - or try one of the sample questions below.");
+
+    // ---------- Metrics ----------
+    async function refreshMetrics() {
+      const resp = await fetch('/api/metrics');
+      const data = await resp.json();
+      const grid = document.getElementById('metric-grid');
+      grid.innerHTML = '';
+      const cards = [
+        ['Total queries', data.total_queries],
+        ['Avg latency', data.avg_latency_ms !== null ? data.avg_latency_ms + ' ms' : '-'],
+        ['P95 latency', data.p95_latency_ms !== null ? data.p95_latency_ms + ' ms' : '-'],
+        ['Verdicts', Object.entries(data.verdict_counts || {}).map(([k, v]) => k + ':' + v).join(', ') || '-'],
+      ];
+      cards.forEach(([label, value]) => {
+        const card = document.createElement('div');
+        card.className = 'metric-card';
+        card.innerHTML = '<div class="label">' + label + '</div><div class="value" style="font-size:16px;">' + value + '</div>';
+        grid.appendChild(card);
+      });
+
+      const evalEl = document.getElementById('eval-summary');
+      if (data.eval && !data.eval.error) {
+        evalEl.innerHTML =
+          'Accuracy pass rate: <strong>' + (data.eval.accuracy_pass_rate ?? 'n/a') + '</strong> &middot; ' +
+          'Faithfulness pass rate: <strong>' + (data.eval.faithfulness_pass_rate ?? 'n/a') + '</strong> &middot; ' +
+          'Total eval tests: ' + data.eval.total_eval_tests +
+          '<div class="hint" style="margin-top:4px;">' + data.eval.note + '</div>';
+      } else {
+        evalEl.innerHTML = 'No promptfoo_results.json found yet. Run <code>npx promptfoo eval --output promptfoo_results.json</code> in this folder, then refresh.';
+      }
+    }
+
+    async function refreshAudit() {
+      const resp = await fetch('/api/audit?limit=25');
+      const data = await resp.json();
+      const body = document.getElementById('audit-body');
+      body.innerHTML = '';
+      (data.entries || []).forEach(e => {
+        const tr = document.createElement('tr');
+        tr.innerHTML =
+          '<td>' + escapeHtml(e.timestamp || '') + '</td>' +
+          '<td>' + escapeHtml((e.question || '').slice(0, 80)) + '</td>' +
+          '<td>' + escapeHtml(e.loan_type || '-') + '</td>' +
+          '<td>' + escapeHtml(e.verdict || '-') + '</td>' +
+          '<td>' + (e.latency_ms !== undefined ? e.latency_ms + ' ms' : '-') + '</td>';
+        body.appendChild(tr);
+      });
+      if ((data.entries || []).length === 0) {
+        body.innerHTML = '<tr><td colspan="5" class="hint">No queries logged yet - try the chat tab.</td></tr>';
+      }
+    }
+  </script>
+</body>
+</html>

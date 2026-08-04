@@ -1,0 +1,116 @@
+# Loan Eligibility Assistant - promptfoo eval gate
+#
+# Runs a fixed regression suite against the live FastAPI backend
+# (POST /api/chat) and checks two things per the demo's success metrics:
+#   - [accuracy]     the eligibility verdict matches the expected verdict
+#   - [faithfulness]  any number the assistant states is a number that
+#                     actually appears in the retrieved source content
+#                     (i.e. it isn't inventing thresholds)
+#
+# Usage:
+#   1. Start the backend:  uvicorn loan_assistant_main:app --port 8000
+#   2. Run the eval:       npx promptfoo eval -c loan_assistant_promptfooconfig.yaml --output promptfoo_results.json
+#
+# NOTE: promptfoo's HTTP provider config keys have shifted slightly across
+# versions. If `npx promptfoo eval` errors on parsing this file, check your
+# installed version against https://promptfoo.dev/docs/providers/http and
+# adjust `body` / `transformResponse` accordingly - the eval logic (test
+# cases + assertions) below does not depend on that provider syntax.
+
+description: "Loan Eligibility Assistant - accuracy + faithfulness eval gate"
+
+prompts:
+  - "{{question}}"
+
+providers:
+  - id: "http://localhost:8000/api/chat"
+    config:
+      method: POST
+      headers:
+        Content-Type: application/json
+      body:
+        message: "{{question}}"
+      # Single-quoted on purpose: YAML single-quoted scalars don't process
+      # backslash escapes, so the \n below reaches promptfoo as the literal
+      # two characters "\n" for the JS engine to interpret - a YAML
+      # double-quoted string here would turn \n into a real newline and
+      # break the JS string literal it sits inside.
+      transformResponse: 'json.answer + "\n\nVERDICT:" + json.verdict + "\nSOURCES:" + JSON.stringify(json.sources)'
+
+defaultTest:
+  assert:
+    - type: latency
+      threshold: 2000
+
+tests:
+  - description: "[accuracy] Personal loan - meets all thresholds -> eligible"
+    vars:
+      question: "I have a credit score of 700, an annual income of $60,000, a DTI of 25%, and I've been employed for 24 months. Am I eligible for a personal loan?"
+    assert:
+      - type: contains
+        value: "VERDICT:eligible"
+
+  - description: "[accuracy] Personal loan - credit score below minimum -> not eligible"
+    vars:
+      question: "My credit score is 580, income $50,000, DTI 20%, employed 36 months. Personal loan?"
+    assert:
+      - type: contains
+        value: "VERDICT:not_eligible"
+
+  - description: "[accuracy] Auto loan - meets all thresholds -> eligible"
+    vars:
+      question: "Credit score 640, income $22,000, DTI 40%, employed 6 months. Auto loan?"
+    assert:
+      - type: contains
+        value: "VERDICT:eligible"
+
+  - description: "[accuracy] Mortgage - income below minimum -> not eligible"
+    vars:
+      question: "Credit score 700, income $30,000, DTI 30%, employed 36 months, applying for a mortgage."
+    assert:
+      - type: contains
+        value: "VERDICT:not_eligible"
+
+  - description: "[accuracy] Credit card - meets all thresholds -> eligible"
+    vars:
+      question: "credit score 610, income $16,000, DTI 45%, employed 4 months, credit card application"
+    assert:
+      - type: contains
+        value: "VERDICT:eligible"
+
+  - description: "[accuracy] Credit card - multiple failing factors -> not eligible"
+    vars:
+      question: "credit score 550, income $10,000, DTI 60%, employed 1 month, credit card"
+    assert:
+      - type: contains
+        value: "VERDICT:not_eligible"
+
+  - description: "[accuracy] No numbers given -> needs more info, not a false eligible/not_eligible"
+    vars:
+      question: "Can I get a personal loan?"
+    assert:
+      - type: contains
+        value: "VERDICT:needs_more_info"
+
+  - description: "[accuracy] General KYC question retrieves the right policy doc"
+    vars:
+      question: "What KYC information or ID do I need to provide?"
+    assert:
+      - type: contains
+        value: "government-issued photo ID"
+
+  - description: "[faithfulness] Mortgage min credit score cited must match policy (680), not invented"
+    vars:
+      question: "What's the minimum credit score for a mortgage?"
+    assert:
+      - type: contains
+        value: "680"
+      - type: not-contains
+        value: "700"
+
+  - description: "[faithfulness] Auto loan max DTI cited must match policy (45%), not invented"
+    vars:
+      question: "What is the auto loan DTI requirement?"
+    assert:
+      - type: contains
+        value: "45"

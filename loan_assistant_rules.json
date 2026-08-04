@@ -1,0 +1,57 @@
+[
+  {
+    "id": "personal_loan_v1",
+    "loan_type": "personal_loan",
+    "title": "Personal Loan Eligibility Policy",
+    "content": "The Personal Loan Eligibility Policy requires a minimum credit score of 650. Applicants must have an annual income of at least $25,000. The maximum acceptable debt-to-income (DTI) ratio is 40%. Applicants must show at least 6 months of continuous employment history. Loan amounts range from $2,000 to $50,000 with terms of 12 to 60 months. Applicants who do not meet the minimum credit score may be offered a secured personal loan alternative at branch discretion.",
+    "thresholds": {
+      "min_credit_score": 650,
+      "min_annual_income": 25000,
+      "max_dti_percent": 40,
+      "min_employment_months": 6
+    }
+  },
+  {
+    "id": "auto_loan_v1",
+    "loan_type": "auto_loan",
+    "title": "Auto Loan Eligibility Policy",
+    "content": "The Auto Loan Eligibility Policy requires a minimum credit score of 620. Applicants must have an annual income of at least $20,000. The maximum acceptable debt-to-income (DTI) ratio is 45%. Applicants must show at least 3 months of continuous employment history. The vehicle being financed must be less than 10 years old, and loan-to-value (LTV) may not exceed 120% of the vehicle's appraised value.",
+    "thresholds": {
+      "min_credit_score": 620,
+      "min_annual_income": 20000,
+      "max_dti_percent": 45,
+      "min_employment_months": 3
+    }
+  },
+  {
+    "id": "mortgage_v1",
+    "loan_type": "mortgage",
+    "title": "Mortgage (Home Loan) Eligibility Policy",
+    "content": "The Mortgage Eligibility Policy requires a minimum credit score of 680. Applicants must have an annual income of at least $40,000. The maximum acceptable debt-to-income (DTI) ratio is 43%. Applicants must show at least 24 months of continuous employment history. Maximum loan-to-value (LTV) is 95%, requiring a minimum 5% down payment. Private mortgage insurance (PMI) is required for any LTV above 80%.",
+    "thresholds": {
+      "min_credit_score": 680,
+      "min_annual_income": 40000,
+      "max_dti_percent": 43,
+      "min_employment_months": 24
+    }
+  },
+  {
+    "id": "credit_card_v1",
+    "loan_type": "credit_card",
+    "title": "Credit Card Eligibility Policy",
+    "content": "The Credit Card Eligibility Policy requires a minimum credit score of 600. Applicants must have an annual income of at least $15,000. The maximum acceptable debt-to-income (DTI) ratio is 50%. Applicants must show at least 3 months of continuous employment history. Initial credit limits range from $500 to $25,000 based on internal risk tier.",
+    "thresholds": {
+      "min_credit_score": 600,
+      "min_annual_income": 15000,
+      "max_dti_percent": 50,
+      "min_employment_months": 3
+    }
+  },
+  {
+    "id": "general_kyc_v1",
+    "loan_type": "general_kyc",
+    "title": "General Pre-Qualification and KYC Requirements",
+    "content": "General Pre-Qualification and KYC Requirements apply to all loan and credit products. Applicants must be at least 18 years old, a U.S. resident with a valid Social Security Number, and must provide a government-issued photo ID. Applicants with an active bankruptcy filed within the last 24 months are not eligible for any credit product until the bankruptcy is discharged. All pre-qualification checks described here are soft inquiries and do not affect the applicant's credit score.",
+    "thresholds": null
+  }
+]

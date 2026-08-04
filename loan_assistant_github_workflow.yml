@@ -1,0 +1,68 @@
+# Loan Eligibility Assistant - CI/CD eval gate
+#
+# IMPORTANT: GitHub only picks up workflows placed at exactly
+# .github/workflows/<name>.yml in your repo. Copy this file there, e.g.:
+#   mkdir -p .github/workflows
+#   cp loan_assistant_github_workflow.yml .github/workflows/eval-gate.yml
+#
+# What it does: on every pull request, starts the FastAPI backend, runs the
+# promptfoo regression suite (accuracy + faithfulness test cases) against
+# it, and fails the job if any test fails or latency exceeds threshold.
+# Making this a required status check on your default branch is what turns
+# it into an actual "blocked merge on regression" gate - that has to be
+# configured in GitHub branch protection settings, this workflow just
+# supplies the pass/fail signal.
+
+name: Eval Gate
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  promptfoo-eval:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install backend dependencies
+        run: pip install -r loan_assistant_requirements.txt
+
+      - name: Start FastAPI backend
+        run: |
+          nohup uvicorn loan_assistant_main:app --host 0.0.0.0 --port 8000 > server.log 2>&1 &
+          for i in $(seq 1 20); do
+            curl -sf http://localhost:8000/api/health && break
+            sleep 1
+          done
+
+      - name: Set up Node.js (for promptfoo)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Run promptfoo eval (accuracy + faithfulness gate)
+        run: |
+          npx --yes promptfoo eval -c loan_assistant_promptfooconfig.yaml --output promptfoo_results.json
+        # npx promptfoo eval exits non-zero when any test fails, which fails
+        # this step and therefore blocks the PR if this check is marked
+        # required in branch protection.
+
+      - name: Upload eval results artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: promptfoo-results
+          path: promptfoo_results.json
+
+      - name: Show backend logs on failure
+        if: failure()
+        run: cat server.log || true

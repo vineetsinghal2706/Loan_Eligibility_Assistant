@@ -1,6 +1,6 @@
 # Loan Eligibility Assistant (demo prototype)
 
-Built for a business-leader demo: a streaming chat assistant that answers
+A streaming chat assistant that answers
 loan pre-qualification questions by retrieving the relevant internal
 eligibility policy (RAG) and giving a grounded, consistent answer — instead
 of a staff member manually checking rules by hand.
